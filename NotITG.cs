@@ -18,6 +18,8 @@ namespace NotITG.External
         public bool HasNotITG = false;
         public event EventHandler OnExit;
 
+        public int IndexLimit;
+
         private void Reset()
         {
             if (HasNotITG)
@@ -28,6 +30,7 @@ namespace NotITG.External
             this.MemoryReader = null;
             this.HasNotITG = false;
             this.VersionDate = -1;
+            this.IndexLimit = -1;
         }
         public bool TryScan()
         {
@@ -50,13 +53,14 @@ namespace NotITG.External
                             this.MemoryReader = new ProcessMemoryMin.MemoryReader(proc);
                             this.VersionDate = details.VersionDate;
                             this.ExternalBaseAddress = details.ExternalAddress;
+                            this.IndexLimit = details.IndexLimit;
                             return true;
                         }
                     }
                 }
                 else
                 {
-                    ProcessMemoryMin.MemoryReader memory = new ProcessMemoryMin.MemoryReader(proc);
+                    var memory = new ProcessMemoryMin.MemoryReader(proc);
 
                     try
                     {
@@ -80,6 +84,7 @@ namespace NotITG.External
                                     this.MemoryReader = memory;
                                     this.VersionDate = details.VersionDate;
                                     this.ExternalBaseAddress = details.ExternalAddress;
+                                    this.IndexLimit = details.IndexLimit;
                                     return true;
                                 }
                             }
@@ -93,41 +98,21 @@ namespace NotITG.External
             return false;
         }
 
-        public uint GetExternal( uint index )
+        public int GetExternal( int index )
         {
             if (!HasNotITG) return 0;
-            switch (this.Version)
-            {
-                case NotITGExternalApi.NOTITG_VERSION.V1:
-                case NotITGExternalApi.NOTITG_VERSION.V2:
-                    if (!(index >= 0 && index <= 9))
-                        throw new Exception("Index range out of bounds.");
-                    break;
-                default:
-                    if (!(index >= 0 && index <= 63))
-                        throw new Exception("Index range out of bounds.");
-                    break;
-            }
+            if (!(index >= 0 && index <= this.IndexLimit))
+                throw new Exception("Index range out of bounds.");
 
             byte offset = (byte)(index*4);
-            byte[] a = this.MemoryReader.Read((IntPtr)this.ExternalBaseAddress + offset, sizeof(uint));
-            return BitConverter.ToUInt32(a, 0);
+            byte[] a = this.MemoryReader.Read((IntPtr)this.ExternalBaseAddress + offset, sizeof(int));
+            return BitConverter.ToInt32(a, 0);
         }
-        public void SetExternal( uint index, uint flag )
+        public void SetExternal( int index, int flag )
         {
             if (!HasNotITG) return;
-            switch (this.Version)
-            {
-                case NotITGExternalApi.NOTITG_VERSION.V1:
-                case NotITGExternalApi.NOTITG_VERSION.V2:
-                    if (!(index >= 0 && index <= 9))
-                        throw new Exception("Index range out of bounds.");
-                    break;
-                default:
-                    if (!(index >= 0 && index <= 63))
-                        throw new Exception("Index range out of bounds.");
-                    break;
-            }
+            if (!(index >= 0 && index <= this.IndexLimit))
+                throw new Exception("Index range out of bounds.");
 
             byte[] b = BitConverter.GetBytes(flag);
             byte offset = (byte)(index * 4);
@@ -136,6 +121,7 @@ namespace NotITG.External
 
         public NotITGHandler(bool isFilenameKnown = true)
         {
+            Reset();
             this.IsFilenameKnown = isFilenameKnown;
         }
     }
@@ -217,6 +203,7 @@ namespace NotITG.External
             public int VersionDate { get; set; }
             public IntPtr BuildAddress { get; set; }
             public IntPtr ExternalAddress { get; set; }
+            public int IndexLimit { get; set; }
 
             public ExternalDetails( NOTITG_VERSION version )
             {
@@ -227,36 +214,42 @@ namespace NotITG.External
                         this.VersionDate = 20161224;
                         this.BuildAddress = (IntPtr)0x006AED20;
                         this.ExternalAddress = (IntPtr)0x00896950;
+                        this.IndexLimit = 9;
                         break;
                     case NOTITG_VERSION.V2:
                         this.Default_FileName = "NotITG-170405.exe";
                         this.VersionDate = 20170405;
                         this.BuildAddress = (IntPtr)0x006B7D40;
                         this.ExternalAddress = (IntPtr)0x008A0880;
+                        this.IndexLimit = 9;
                         break;
                     case NOTITG_VERSION.V3:
                         this.Default_FileName = "NotITG-V3.exe";
                         this.VersionDate = 20180617;
                         this.BuildAddress = (IntPtr)0x006DFD60;
                         this.ExternalAddress = (IntPtr)0x008CC9D8;
+                        this.IndexLimit = 63;
                         break;
                     case NOTITG_VERSION.V3_1:
                         this.Default_FileName = "NotITG-V3.1.exe";
                         this.VersionDate = 20180827;
                         this.BuildAddress = (IntPtr)0x006E7D60;
                         this.ExternalAddress = (IntPtr)0x008BE0F8;
+                        this.IndexLimit = 63;
                         break;
                     case NOTITG_VERSION.V4:
                         this.Default_FileName = "NotITG-V4.exe";
                         this.VersionDate = 20200112;
                         this.BuildAddress = (IntPtr)0x006E0E60;
                         this.ExternalAddress = (IntPtr)0x008BA388;
+                        this.IndexLimit = 63;
                         break;
                     case NOTITG_VERSION.V4_0_1:
                         this.Default_FileName = "NotITG-V4.0.1.exe";
                         this.VersionDate = 20200126;
                         this.BuildAddress = (IntPtr)0x006C5E40;
                         this.ExternalAddress = (IntPtr)0x00897D10;
+                        this.IndexLimit = 63;
                         break;
                     default:
                         throw new Exception("Version unknown!");
