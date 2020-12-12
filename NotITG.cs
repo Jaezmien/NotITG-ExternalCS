@@ -38,23 +38,33 @@ namespace NotITG.External
             {
                 if (this.IsFilenameKnown)
                 {
+                    //Console.WriteLine($"'{ proc.ProcessName.ToLower() }' CONTAINS 'notitg'");
                     foreach (NotITGExternalApi.NOTITG_VERSION enum_ver in Enum.GetValues(typeof(NotITGExternalApi.NOTITG_VERSION)))
                     {
                         if (enum_ver == NotITGExternalApi.NOTITG_VERSION.UNKNOWN) continue;
                         var details = new NotITGExternalApi.ExternalDetails(enum_ver);
-                        if (proc.MainModule.FileName.Split('\\').LastOrDefault() == details.Default_FileName)
+                        if (!proc.ProcessName.ToLower().Contains("notitg")) continue; // penis
+                        try
                         {
-                            // Got!
-                            proc.EnableRaisingEvents = true;
-                            proc.Exited += (s, e) => { Reset(); };
-                            this.Version = enum_ver;
-                            this.Process = proc;
-                            this.HasNotITG = true;
-                            this.MemoryReader = new ProcessMemoryMin.MemoryReader(proc);
-                            this.VersionDate = details.VersionDate;
-                            this.ExternalBaseAddress = details.ExternalAddress;
-                            this.IndexLimit = details.IndexLimit;
-                            return true;
+                            if (proc.MainModule.FileName.Split('\\').LastOrDefault() == details.Default_FileName)
+                            {
+                                // Got!
+                                proc.EnableRaisingEvents = true;
+                                proc.Exited += (s, e) => { Reset(); };
+                                this.Version = enum_ver;
+                                this.Process = proc;
+                                this.HasNotITG = true;
+                                this.MemoryReader = new ProcessMemoryMin.MemoryReader(proc);
+                                this.VersionDate = details.VersionDate;
+                                this.ExternalBaseAddress = details.ExternalAddress;
+                                this.IndexLimit = details.IndexLimit;
+                                return true;
+                            }
+                        } catch(Exception ex)
+                        {
+                            // hopefully this error is because we're trying to access a really high access priviledge and not
+                            // nitg being ass
+                            Console.WriteLine(ex);
                         }
                     }
                 }
@@ -92,7 +102,10 @@ namespace NotITG.External
 
                         memory.Close();
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                    }
                 }
             }
             return false;
